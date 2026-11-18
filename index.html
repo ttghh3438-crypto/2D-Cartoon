@@ -1,0 +1,2342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>2D Cartoon Studio Pro</title>
+  <style>
+    /* =========================================================================
+       1. DESIGN TOKENS & GLOBAL RESET
+       ========================================================================= */
+    :root {
+      --bg-app: #0b0d12;
+      --bg-panel: #141821;
+      --bg-card: #0f1219;
+      --bg-control: #1e2432;
+      --border-subtle: #2a3142;
+      --border-card: #222836;
+      --accent-gold: #ffb703;
+      --accent-blue: #3a86ff;
+      --accent-red: #ef476f;
+      --accent-green: #06d6a0;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    input, textarea, select {
+      user-select: text;
+    }
+
+    body {
+      margin: 0;
+      padding: calc(env(safe-area-inset-top) + 8px) 10px calc(env(safe-area-inset-bottom) + 16px) 10px;
+      background: var(--bg-app);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* =========================================================================
+       2. HEADER & VIEWPORT STAGE
+       ========================================================================= */
+    header {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0;
+      color: var(--accent-gold);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.2px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .export-banner {
+      width: 100%;
+      max-width: 680px;
+      display: none;
+      background: #132a22;
+      border: 1px solid var(--accent-green);
+      border-radius: 10px;
+      padding: 8px 12px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      max-width: 680px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--border-subtle);
+      position: relative;
+      touch-action: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .hud-status {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(11, 13, 18, 0.85);
+      backdrop-filter: blur(6px);
+      padding: 4px 10px;
+      border-radius: 7px;
+      font-size: 11px;
+      color: var(--accent-gold);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .hud-scene {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(58, 134, 255, 0.92);
+      padding: 4px 10px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      pointer-events: none;
+    }
+
+    /* =========================================================================
+       3. TIMELINE STRIP & TRANSPORT BAR
+       ========================================================================= */
+    .scene-strip {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      align-items: center;
+      padding-bottom: 2px;
+    }
+
+    .scene-chip {
+      padding: 5px 12px;
+      border-radius: 8px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .scene-chip.active {
+      background: var(--accent-blue);
+      color: #fff;
+      border-color: var(--accent-blue);
+    }
+
+    .transport-bar {
+      width: 100%;
+      max-width: 680px;
+      display: grid;
+      grid-template-columns: 1fr 1.25fr 1.25fr;
+      gap: 6px;
+    }
+
+    /* =========================================================================
+       4. NAVIGATION TABS & PANELS
+       ========================================================================= */
+    .tabs {
+      width: 100%;
+      max-width: 680px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: var(--bg-panel);
+      padding: 4px;
+      border-radius: 11px;
+      gap: 4px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .tab-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      padding: 8px 3px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-control);
+      color: var(--accent-gold);
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 680px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 11px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel.active {
+      display: flex;
+    }
+
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 9px;
+      padding: 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* =========================================================================
+       5. FORM CONTROLS & BUTTONS
+       ========================================================================= */
+    .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+
+    button, .file-btn {
+      background: var(--bg-control);
+      color: var(--text-primary);
+      border: 1px solid #2e364a;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button:active:not(:disabled), .file-btn:active {
+      transform: scale(0.97);
+      opacity: 0.85;
+    }
+
+    .btn-accent { background: var(--accent-gold); color: #111; border: none; }
+    .btn-primary { background: var(--accent-blue); color: #fff; border: none; }
+    .btn-record { background: var(--accent-red); color: #fff; border: none; }
+    .btn-recording { background: var(--accent-green); color: #111; border: none; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      50% { opacity: 0.75; }
+    }
+
+    input[type="file"] { display: none; }
+
+    select, input[type="text"], input[type="password"], textarea, input[type="range"] {
+      background: var(--bg-app);
+      color: var(--text-primary);
+      border: 1px solid #2c3346;
+      padding: 7px 9px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      width: 100%;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 56px;
+    }
+
+    label.lbl {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      min-width: 48px;
+    }
+
+    .chip-list {
+      display: flex;
+      gap: 5px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .chip {
+      padding: 5px 11px;
+      border-radius: 16px;
+      background: var(--bg-control);
+      font-size: 11.5px;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    .ai-preview {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-app);
+      padding: 9px;
+      border-radius: 9px;
+      border: 1px dashed #3b4259;
+    }
+
+    .ai-preview img {
+      max-height: 150px;
+      border-radius: 8px;
+      background: repeating-conic-gradient(#222 0% 25%, #333 0% 50%) 50% / 16px 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP APPLICATION HEADER -->
+  <header>
+    <h1>🎬 2D Cartoon Studio Pro</h1>
+    <div class="header-actions">
+      <button onclick="ProjectStorage.save()" title="Save Project">💾 Save</button>
+      <button onclick="ProjectStorage.load()" title="Load Project">📂 Load</button>
+      <select id="aspectSelect" style="width:auto;" onchange="UI.changeAspect()" aria-label="Aspect Ratio">
+        <option value="16:9">16:9</option>
+        <option value="9:16">9:16</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- EXPORT COMPLETION BANNER -->
+  <div class="export-banner" id="exportBanner">
+    <span style="font-size:12px; color:var(--accent-green); font-weight:600;">✅ Video Export Ready!</span>
+    <div class="row">
+      <a id="exportDownloadLink" class="btn-accent" style="padding:5px 10px; border-radius:7px; text-decoration:none; font-size:12px; font-weight:700;">⬇️ Download</a>
+      <button onclick="document.getElementById('exportBanner').style.display='none'" style="padding:5px 8px; font-size:11px;">✕</button>
+    </div>
+  </div>
+
+  <!-- MAIN 2D ANIMATION STAGE -->
+  <div class="canvas-wrap">
+    <div class="hud-status" id="statusBadge">Ready • Tap or drag characters on stage</div>
+    <div class="hud-scene" id="sceneTag">Scene 1</div>
+    <canvas id="stage" width="1280" height="720"></canvas>
+  </div>
+
+  <!-- MULTI-SCENE TIMELINE STRIP -->
+  <div class="scene-strip" id="sceneStrip"></div>
+
+  <!-- MASTER PLAYBACK & RECORDING CONTROLS -->
+  <div class="transport-bar">
+    <button id="playAllBtn" onclick="Exporter.playFullStory(false)">▶️ Play All</button>
+    <button class="btn-primary" id="recMovieBtn" onclick="Exporter.playFullStory(true)">🎬 Record Movie</button>
+    <button class="btn-record" id="recordBtn" onclick="Exporter.toggleManualRecording()">⏺ Live Rec</button>
+  </div>
+  <audio id="voicePlayer" crossorigin="anonymous" playsinline></audio>
+  <audio id="bgmPlayer" loop crossorigin="anonymous" playsinline></audio>
+
+  <!-- STUDIO WORKFLOW TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="UI.switchTab('tabStory', this)">1. 🪄 Story & Cast</button>
+    <button class="tab-btn" onclick="UI.switchTab('tabStage', this)">2. 🎭 Stage & Cam</button>
+    <button class="tab-btn" onclick="UI.switchTab('tabAudio', this)">3. 🎙️ Voice & BGM</button>
+    <button class="tab-btn" onclick="UI.switchTab('tabAI', this)">4. ✨ AI & API</button>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 1: STORY & CAST BUILDER                                           -->
+  <!-- ===================================================================== -->
+  <div class="panel active" id="tabStory">
+    <div class="section-card">
+      <div class="section-title">
+        <span>Automated Story-to-Scenes</span>
+        <span style="color:var(--text-muted); font-weight:500;">Claude & OpenAI Ready</span>
+      </div>
+      <textarea id="storyPromptInput" placeholder="Describe your story idea (e.g., A creator gets an idea on his laptop, travels to a distant castle, and becomes a hero)..."></textarea>
+      <div class="grid-2">
+        <button class="btn-primary" id="genStoryBtn" onclick="AIService.generateStory()">🤖 AI Build Scenes</button>
+        <button class="btn-accent" onclick="StoryEngine.buildDemoStory()">⚡ 1-Click Demo Story</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">
+        <span>2D Vector Stickman & Props</span>
+        <span style="color:var(--accent-green);">Offline Built-in</span>
+      </div>
+      <div class="grid-2">
+        <select id="stickExpr" aria-label="Character Expression">
+          <option value="happy">😄 Expression: Happy</option>
+          <option value="idea">💡 Expression: Inspired</option>
+          <option value="hero">😠 Expression: Heroic</option>
+          <option value="shocked">😲 Expression: Shocked</option>
+        </select>
+        <select id="stickGear" aria-label="Character Outfit">
+          <option value="none">🧍 Outfit: Standard</option>
+          <option value="laptop">💻 Outfit: Laptop Desk</option>
+          <option value="backpack">🎒 Outfit: Backpack</option>
+          <option value="hero_sword">🦸 Outfit: Cape & Sword</option>
+        </select>
+      </div>
+      <div class="grid-3">
+        <button class="btn-accent" onclick="StoryEngine.spawnStickman()">➕ Stickman</button>
+        <button onclick="StoryEngine.spawnProp('lightbulb')">💡 Idea Bulb</button>
+        <button onclick="StoryEngine.spawnProp('arrow')">➡️ Arrow</button>
+      </div>
+      <div class="row">
+        <select id="vectorBgSelect" style="flex:1;" aria-label="2D Background Theme">
+          <option value="studio">💻 Scene BG: Creator Studio</option>
+          <option value="meadow">🏰 Scene BG: Castle Meadow</option>
+          <option value="battle">🔥 Scene BG: Fire Fortress</option>
+        </select>
+        <button onclick="StoryEngine.applyVectorBG()">🖼️ Apply BG</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <label class="file-btn">🖼️ Upload Scene BG<input type="file" accept="image/*" onchange="StoryEngine.loadBGFile(event)" /></label>
+      <label class="file-btn">➕ Upload Char PNG<input type="file" accept="image/*" onchange="StoryEngine.loadCharFile(event)" /></label>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 2: STAGE, ANIMATION & CAMERA                                      -->
+  <!-- ===================================================================== -->
+  <div class="panel" id="tabStage">
+    <div class="section-card">
+      <div class="section-title">
+        <span>Active Scene Layers</span>
+        <span style="color:var(--text-muted);">Tap chip to select</span>
+      </div>
+      <div class="chip-list" id="layerList"></div>
+      <div class="grid-4">
+        <button onclick="StageManager.moveLayerOrder(-1)">⬇️ Back</button>
+        <button onclick="StageManager.moveLayerOrder(1)">⬆️ Front</button>
+        <button onclick="StageManager.flipSelected()">↔️ Flip</button>
+        <button onclick="StageManager.cutoutSelectedBg()">✂️ Cutout</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">
+        <span>Motion & Keyframe Path</span>
+        <button onclick="StageManager.deleteSelected()" style="padding:3px 8px; color:var(--accent-red); font-size:11px;">🗑️ Remove Layer</button>
+      </div>
+      <div class="row">
+        <label class="lbl">Motion:</label>
+        <select id="animSelect" style="flex:1;" onchange="StageManager.updateSelected('anim', this.value)">
+          <option value="none">Static (Idle)</option>
+          <option value="bounce">Cartoon Bounce</option>
+          <option value="walk">Walk Sway</option>
+          <option value="shake">Tremble Shake</option>
+          <option value="float">Hover Float</option>
+        </select>
+        <label style="font-size:11.5px; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+          <input type="checkbox" id="talkCheck" onchange="StageManager.updateSelected('isTalker', this.checked)" /> Lip-Sync
+        </label>
+      </div>
+      <div class="row">
+        <label class="lbl">Scale:</label>
+        <input type="range" id="scaleRange" min="0.15" max="2.5" step="0.05" value="0.85" style="flex:1;" oninput="StageManager.updateSelected('scale', parseFloat(this.value))" />
+      </div>
+      <div class="grid-3">
+        <button onclick="StageManager.setKeyframe('A')">📍 Set Start A</button>
+        <button onclick="StageManager.setKeyframe('B')">🏁 Set End B</button>
+        <button class="btn-primary" onclick="StageManager.triggerMoveAB()">▶️ Walk A→B</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><span>Camera & Scene Management</span></div>
+      <div class="row">
+        <label class="lbl">Zoom:</label>
+        <input type="range" id="camZoomRange" min="1" max="2.5" step="0.05" value="1" style="flex:1;" oninput="StageManager.setCameraZoom(parseFloat(this.value))" />
+        <button onclick="StageManager.focusSelected()">🎯 Focus</button>
+        <button onclick="StageManager.resetCamera()">🔄 Reset</button>
+      </div>
+      <div class="grid-3">
+        <button onclick="SceneManager.addScene(false)">➕ Blank Scene</button>
+        <button onclick="SceneManager.addScene(true)">📋 Duplicate</button>
+        <button style="color:var(--accent-red);" onclick="SceneManager.deleteCurrent()">🗑️ Del Scene</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 3: VOICE, SUBTITLES & ROYALTY-FREE BGM                            -->
+  <!-- ===================================================================== -->
+  <div class="panel" id="tabAudio">
+    <div class="section-card">
+      <div class="section-title">
+        <span>Scene Dialogue & Voiceover</span>
+        <span id="sceneAudioBadge" style="color:var(--accent-green);">📱 iOS Voice Ready</span>
+      </div>
+      <input type="text" id="subtitleInput" placeholder="On-screen caption text for this scene..." oninput="SceneManager.saveSubtitle()" />
+      <textarea id="ttsTextInput" placeholder="Enter English voiceover script for this scene..."></textarea>
+
+      <div class="row">
+        <select id="voiceEngineSelect" style="flex:1;" onchange="UI.toggleVoiceEngine()">
+          <option value="native">📱 iOS Built-in Voice (Preview)</option>
+          <option value="api">🌐 AI Voice API (Exportable)</option>
+        </select>
+        <label class="file-btn">📂 Import Audio<input type="file" accept="audio/*" onchange="AudioEngine.loadSceneVoiceFile(event)" /></label>
+      </div>
+
+      <div id="nativeVoiceControls" style="display:flex; flex-direction:column; gap:6px;">
+        <select id="nativeVoiceList" aria-label="System Voice"></select>
+        <div class="row">
+          <label class="lbl">Pitch:</label>
+          <input type="range" id="pitchRange" min="0.6" max="1.7" step="0.1" value="1.15" style="flex:1;" />
+          <label class="lbl">Speed:</label>
+          <input type="range" id="rateRange" min="0.7" max="1.4" step="0.1" value="1.05" style="flex:1;" />
+        </div>
+        <div class="grid-2">
+          <button class="btn-accent" onclick="AudioEngine.previewSceneDialogue()">🔊 Preview Voice</button>
+          <button onclick="AudioEngine.clearSceneAudio()" style="color:var(--text-muted);">🔄 Reset to System</button>
+        </div>
+      </div>
+
+      <div id="apiVoiceControls" class="row" style="display:none;">
+        <input type="text" id="ttsVoiceName" value="alloy" style="flex:1;" placeholder="Voice ID (alloy, nova, echo...)" />
+        <button class="btn-primary" id="genVoiceBtn" onclick="AIService.generateVoice()">🎙️ Generate Voice</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">
+        <span>Copyright-Free Background Music & SFX</span>
+        <span style="color:var(--accent-green);">YouTube Safe</span>
+      </div>
+      <div class="row">
+        <select id="bgmPresetSelect" style="flex:1;" onchange="AudioEngine.onBgmPresetChange()">
+          <option value="upbeat">😄 Built-in: Upbeat Cartoon</option>
+          <option value="epic">⚔️ Built-in: Epic Adventure</option>
+          <option value="chill">☕ Built-in: Chill Storytelling</option>
+          <option value="mystery">🕵️ Built-in: Mystery Suspense</option>
+          <option value="none">🔇 Mute Music</option>
+          <option value="custom">📂 Custom Audio File</option>
+        </select>
+        <button onclick="AudioEngine.toggleBgm()" id="playBgmBtn">🎵 Test</button>
+      </div>
+      <div class="row">
+        <label class="lbl">Volume:</label>
+        <input type="range" id="bgmVolRange" min="0" max="1" step="0.05" value="0.22" style="flex:1;" oninput="AudioEngine.setBgmVolume(this.value)" />
+        <label class="file-btn">🎶 Load MP3<input type="file" accept="audio/*" onchange="AudioEngine.loadBgmFile(event)" /></label>
+      </div>
+      <div class="grid-4">
+        <button onclick="AudioEngine.playSFX('boing')">🦘 Boing</button>
+        <button onclick="AudioEngine.playSFX('pop')">🫧 Pop</button>
+        <button onclick="AudioEngine.playSFX('boom')">💥 Boom</button>
+        <button onclick="AudioEngine.playSFX('ding')">✨ Ding</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 4: AI ART GENERATOR & API CONFIGURATION                           -->
+  <!-- ===================================================================== -->
+  <div class="panel" id="tabAI">
+    <div class="section-card">
+      <div class="section-title"><span>AI 2D Illustration Generator</span></div>
+      <select id="imgStylePreset">
+        <option value="character">Style: 2D Cartoon Character (Auto Cutout)</option>
+        <option value="background">Style: 2D Cartoon Background Scenery</option>
+        <option value="none">Style: Custom Raw Prompt</option>
+      </select>
+      <textarea id="imgPromptInput" placeholder="Describe the 2D character or background scene you want AI to generate..."></textarea>
+      <button class="btn-primary" id="genImgBtn" onclick="AIService.generateImage()">✨ Generate 2D Art</button>
+
+      <div class="ai-preview" id="aiImgPreviewBox">
+        <img id="aiImgPreview" alt="AI Generated Artwork" />
+        <div class="grid-2" style="width:100%;">
+          <button class="btn-accent" onclick="AIService.applyImageAsChar(true)">➕ Add Character</button>
+          <button onclick="AIService.applyImageAsBG()">🖼️ Set Scene BG</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">
+        <span>API Configuration Vault</span>
+        <button onclick="UI.toggleApiDrawer()" style="padding:3px 8px; font-size:11px;">Show / Hide</button>
+      </div>
+      <div id="apiDrawer" style="display:flex; flex-direction:column; gap:6px;">
+        <input type="text" id="cfgLlmUrl" placeholder="Story LLM Endpoint (OpenAI or Anthropic /v1/messages)" />
+        <input type="text" id="cfgLlmModel" placeholder="LLM Model (e.g., gpt-4o-mini or claude-3-5-sonnet-20241022)" />
+        <input type="text" id="cfgImgUrl" placeholder="Image API Endpoint (e.g., .../v1/images/generations)" />
+        <input type="text" id="cfgImgModel" placeholder="Image Model (e.g., dall-e-3, flux-schnell)" />
+        <input type="text" id="cfgTtsUrl" placeholder="TTS API Endpoint (e.g., .../v1/audio/speech)" />
+        <input type="password" id="cfgApiKey" placeholder="API Secret Key (sk-...)" />
+        <button class="btn-accent" onclick="UI.saveApiSettings()">💾 Save API Settings</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  'use strict';
+
+  // ===========================================================================
+  // 1. GLOBAL REFERENCES, STATE & UTILITY HELPERS
+  // ===========================================================================
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  const voicePlayer = document.getElementById('voicePlayer');
+  const bgmPlayer = document.getElementById('bgmPlayer');
+
+  let uidCounter = 100;
+  const nextId = (prefix = 'id') => `${prefix}_${++uidCounter}`;
+
+  const State = {
+    scenes: [
+      {
+        id: nextId('sc'),
+        name: 'Scene 1',
+        bgImg: null,
+        layers: [],
+        subtitle: '',
+        voiceUrl: null,
+        voiceBlob: null,
+        cam: { zoom: 1, panX: 0, panY: 0 }
+      }
+    ],
+    currentSceneIdx: 0,
+    selectedLayerId: null,
+    liveCam: { zoom: 1, panX: 0, panY: 0 },
+    isDragging: false,
+    dragOffset: { x: 0, y: 0 },
+    lastGeneratedImg: null,
+    isPlayingFullStory: false,
+    isRecording: false
+  };
+
+  const currentScene = () => State.scenes[State.currentSceneIdx];
+  const currentLayers = () => currentScene().layers;
+  const setStatus = (msg) => { document.getElementById('statusBadge').innerText = msg; };
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  }
+
+  /**
+   * Cross-version rounded rectangle path helper (compatible with all iOS WebViews)
+   */
+  function drawRoundRect(context, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + r, y);
+    context.arcTo(x + width, y, x + width, y + height, r);
+    context.arcTo(x + width, y + height, x, y + height, r);
+    context.arcTo(x, y + height, x, y, r);
+    context.arcTo(x, y, x + width, y, r);
+    context.closePath();
+  }
+
+  // ===========================================================================
+  // 2. UI CONTROLLER
+  // ===========================================================================
+  const UI = {
+    init() {
+      ['cfgLlmUrl', 'cfgLlmModel', 'cfgImgUrl', 'cfgImgModel', 'cfgTtsUrl', 'cfgApiKey'].forEach(id => {
+        const saved = localStorage.getItem(id);
+        if (saved) document.getElementById(id).value = saved;
+      });
+      AudioEngine.populateNativeVoices();
+      SceneManager.renderStrip();
+    },
+
+    switchTab(tabId, btn) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    },
+
+    changeAspect() {
+      const val = document.getElementById('aspectSelect').value;
+      if (val === '16:9') {
+        canvas.width = 1280;
+        canvas.height = 720;
+      } else {
+        canvas.width = 720;
+        canvas.height = 1280;
+      }
+    },
+
+    toggleApiDrawer() {
+      const drawer = document.getElementById('apiDrawer');
+      drawer.style.display = drawer.style.display === 'none' ? 'flex' : 'none';
+    },
+
+    saveApiSettings() {
+      ['cfgLlmUrl', 'cfgLlmModel', 'cfgImgUrl', 'cfgImgModel', 'cfgTtsUrl', 'cfgApiKey'].forEach(id => {
+        localStorage.setItem(id, document.getElementById(id).value.trim());
+      });
+      setStatus('API settings saved!');
+    },
+
+    toggleVoiceEngine() {
+      const mode = document.getElementById('voiceEngineSelect').value;
+      document.getElementById('apiVoiceControls').style.display = mode === 'api' ? 'flex' : 'none';
+      document.getElementById('nativeVoiceControls').style.display = mode === 'native' ? 'flex' : 'none';
+    }
+  };
+
+  // ===========================================================================
+  // 3. VECTOR GRAPHICS & EDGE FLOOD-FILL CUTOUT ENGINE
+  // ===========================================================================
+  const VectorFactory = {
+    createStickman(expression = 'happy', gear = 'none') {
+      return new Promise(resolve => {
+        const c = document.createElement('canvas');
+        c.width = 460;
+        c.height = 480;
+        const g = c.getContext('2d');
+        g.lineCap = 'round';
+        g.lineJoin = 'round';
+        const cx = 230, headY = 135, headR = 72;
+
+        // Hero Cape (rendered behind torso)
+        if (gear === 'hero_sword') {
+          g.fillStyle = '#e63946';
+          g.strokeStyle = '#111111';
+          g.lineWidth = 6;
+          g.beginPath();
+          g.moveTo(cx - 10, 215);
+          g.quadraticCurveTo(cx - 135, 290, cx - 155, 410);
+          g.lineTo(cx - 35, 390);
+          g.closePath();
+          g.fill();
+          g.stroke();
+        }
+
+        // Adventurer Backpack
+        if (gear === 'backpack') {
+          g.fillStyle = '#bc6c25';
+          g.strokeStyle = '#111111';
+          g.lineWidth = 7;
+          drawRoundRect(g, cx - 72, 215, 58, 95, 18);
+          g.fill();
+          g.stroke();
+        }
+
+        // Torso & Legs
+        g.strokeStyle = '#111111';
+        g.lineWidth = 11;
+        g.beginPath();
+        g.moveTo(cx, headY + headR);
+        g.lineTo(cx, 335);
+        if (gear === 'laptop') {
+          g.lineTo(cx + 65, 345);
+          g.lineTo(cx + 75, 420);
+        } else {
+          g.moveTo(cx, 335);
+          g.lineTo(cx - 42, 435);
+          g.moveTo(cx, 335);
+          g.lineTo(cx + 48, 435);
+        }
+        g.stroke();
+
+        // Arms
+        g.beginPath();
+        if (gear === 'laptop') {
+          g.moveTo(cx, 235);
+          g.lineTo(cx + 68, 275);
+        } else if (gear === 'hero_sword') {
+          g.moveTo(cx, 235);
+          g.lineTo(cx - 50, 295);
+          g.moveTo(cx, 235);
+          g.lineTo(cx + 65, 250);
+        } else {
+          g.moveTo(cx, 235);
+          g.lineTo(cx - 55, 295);
+          g.moveTo(cx, 235);
+          g.lineTo(cx + 55, 295);
+        }
+        g.stroke();
+
+        // Laptop & Desk Props
+        if (gear === 'laptop') {
+          g.fillStyle = '#8d5524';
+          g.strokeStyle = '#111111';
+          g.lineWidth = 6;
+          g.fillRect(cx + 30, 315, 180, 18);
+          g.strokeRect(cx + 30, 315, 180, 18);
+          g.fillStyle = '#4a4e69';
+          g.beginPath();
+          g.moveTo(cx + 75, 315);
+          g.lineTo(cx + 150, 315);
+          g.lineTo(cx + 175, 235);
+          g.lineTo(cx + 100, 235);
+          g.closePath();
+          g.fill();
+          g.stroke();
+        }
+
+        // Broadsword Prop
+        if (gear === 'hero_sword') {
+          g.save();
+          g.translate(cx + 68, 248);
+          g.rotate(-0.55);
+          g.fillStyle = '#e2e8f0';
+          g.strokeStyle = '#111111';
+          g.lineWidth = 5;
+          g.beginPath();
+          g.moveTo(-10, 0);
+          g.lineTo(-10, -125);
+          g.lineTo(0, -148);
+          g.lineTo(10, -125);
+          g.lineTo(10, 0);
+          g.closePath();
+          g.fill();
+          g.stroke();
+          g.fillStyle = '#ffb703';
+          g.fillRect(-24, -4, 48, 12);
+          g.strokeRect(-24, -4, 48, 12);
+          g.restore();
+        }
+
+        // Cartoon Head
+        g.fillStyle = '#ffffff';
+        g.strokeStyle = '#111111';
+        g.lineWidth = 9;
+        g.beginPath();
+        g.arc(cx, headY, headR, 0, Math.PI * 2);
+        g.fill();
+        g.stroke();
+
+        // Eyes & Pupils
+        g.fillStyle = '#ffffff';
+        g.lineWidth = 5;
+        g.beginPath();
+        g.ellipse(cx - 18, headY - 10, 15, 20, 0, 0, Math.PI * 2);
+        g.ellipse(cx + 22, headY - 10, 15, 20, 0, 0, Math.PI * 2);
+        g.fill();
+        g.stroke();
+
+        g.fillStyle = '#111111';
+        g.beginPath();
+        g.arc(cx - 14, headY - 10, 6, 0, Math.PI * 2);
+        g.arc(cx + 26, headY - 10, 6, 0, Math.PI * 2);
+        g.fill();
+
+        // Facial Expressions
+        g.lineWidth = 6;
+        if (expression === 'hero') {
+          g.beginPath();
+          g.moveTo(cx - 34, headY - 36);
+          g.lineTo(cx - 4, headY - 24);
+          g.moveTo(cx + 40, headY - 36);
+          g.lineTo(cx + 10, headY - 24);
+          g.stroke();
+          g.beginPath();
+          g.arc(cx + 4, headY + 34, 18, Math.PI * 1.1, Math.PI * 1.9);
+          g.stroke();
+        } else if (expression === 'shocked') {
+          g.beginPath();
+          g.ellipse(cx + 4, headY + 28, 14, 18, 0, 0, Math.PI * 2);
+          g.fillStyle = '#ef476f';
+          g.fill();
+          g.stroke();
+        } else {
+          g.beginPath();
+          g.arc(cx + 4, headY + 14, 24, 0.1 * Math.PI, 0.9 * Math.PI);
+          g.fillStyle = '#ef476f';
+          g.fill();
+          g.stroke();
+        }
+
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = c.toDataURL('image/png');
+      });
+    },
+
+    createProp(type) {
+      return new Promise(resolve => {
+        const c = document.createElement('canvas');
+        c.width = 220;
+        c.height = 220;
+        const g = c.getContext('2d');
+        g.lineWidth = 7;
+        g.strokeStyle = '#111111';
+        g.lineCap = 'round';
+        g.lineJoin = 'round';
+
+        if (type === 'lightbulb') {
+          g.fillStyle = 'rgba(255, 224, 102, 0.45)';
+          g.beginPath();
+          g.arc(110, 95, 78, 0, Math.PI * 2);
+          g.fill();
+
+          g.fillStyle = '#ffd166';
+          g.beginPath();
+          g.arc(110, 90, 46, Math.PI * 0.78, Math.PI * 2.22);
+          g.lineTo(130, 152);
+          g.lineTo(90, 152);
+          g.closePath();
+          g.fill();
+          g.stroke();
+
+          g.fillStyle = '#94a3b8';
+          g.fillRect(92, 152, 36, 22);
+          g.strokeRect(92, 152, 36, 22);
+        } else if (type === 'arrow') {
+          g.fillStyle = '#ef476f';
+          g.beginPath();
+          g.moveTo(25, 85);
+          g.lineTo(125, 85);
+          g.lineTo(125, 50);
+          g.lineTo(195, 110);
+          g.lineTo(125, 170);
+          g.lineTo(125, 135);
+          g.lineTo(25, 135);
+          g.closePath();
+          g.fill();
+          g.stroke();
+        }
+
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = c.toDataURL('image/png');
+      });
+    },
+
+    createBackground(theme) {
+      return new Promise(resolve => {
+        const c = document.createElement('canvas');
+        c.width = 1280;
+        c.height = 720;
+        const g = c.getContext('2d');
+
+        if (theme === 'studio') {
+          g.fillStyle = '#2b2d42';
+          g.fillRect(0, 0, 1280, 720);
+          g.fillStyle = '#8ecae6';
+          g.fillRect(140, 110, 260, 220);
+          g.strokeStyle = '#111111';
+          g.lineWidth = 8;
+          g.strokeRect(140, 110, 260, 220);
+          g.fillStyle = '#5c4d7d';
+          g.fillRect(0, 540, 1280, 180);
+        } else if (theme === 'meadow') {
+          const sky = g.createLinearGradient(0, 0, 0, 540);
+          sky.addColorStop(0, '#4ea8de');
+          sky.addColorStop(1, '#caf0f8');
+          g.fillStyle = sky;
+          g.fillRect(0, 0, 1280, 720);
+
+          g.fillStyle = '#748cab';
+          g.fillRect(820, 250, 240, 290);
+          g.fillRect(800, 190, 55, 350);
+          g.fillRect(1025, 190, 55, 350);
+
+          g.fillStyle = '#52b788';
+          g.beginPath();
+          g.arc(400, 760, 550, Math.PI, 0);
+          g.fill();
+
+          g.fillStyle = '#74c69d';
+          g.beginPath();
+          g.arc(980, 780, 520, Math.PI, 0);
+          g.fill();
+        } else if (theme === 'battle') {
+          const fire = g.createLinearGradient(0, 0, 0, 720);
+          fire.addColorStop(0, '#9b2226');
+          fire.addColorStop(0.55, '#ca6702');
+          fire.addColorStop(1, '#ee9b00');
+          g.fillStyle = fire;
+          g.fillRect(0, 0, 1280, 720);
+
+          g.fillStyle = '#1d1e2c';
+          g.fillRect(760, 210, 280, 360);
+          g.fillRect(740, 140, 65, 430);
+          g.fillRect(995, 140, 65, 430);
+
+          g.fillStyle = '#2b1918';
+          g.fillRect(0, 550, 1280, 170);
+        }
+
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = c.toDataURL('image/png');
+      });
+    },
+
+    /**
+     * Border-seeded Breadth-First Search (Flood-Fill) cutout to remove exterior
+     * backgrounds while keeping interior white highlights (eyes/head) intact.
+     */
+    edgeFloodFillCutout(sourceImg, tolerance = 115) {
+      return new Promise((resolve, reject) => {
+        try {
+          const w = sourceImg.width;
+          const h = sourceImg.height;
+          const off = document.createElement('canvas');
+          off.width = w;
+          off.height = h;
+          const oCtx = off.getContext('2d');
+          oCtx.drawImage(sourceImg, 0, 0);
+
+          const imgData = oCtx.getImageData(0, 0, w, h);
+          const data = imgData.data;
+          const bgR = data[0], bgG = data[1], bgB = data[2];
+
+          const visited = new Uint8Array(w * h);
+          const queue = new Int32Array(w * h);
+          let head = 0, tail = 0;
+
+          const matchesBg = (idx) => {
+            const p = idx * 4;
+            if (data[p + 3] === 0) return true;
+            const diff = Math.abs(data[p] - bgR) + Math.abs(data[p + 1] - bgG) + Math.abs(data[p + 2] - bgB);
+            return diff <= tolerance;
+          };
+
+          const enqueue = (x, y) => {
+            if (x < 0 || x >= w || y < 0 || y >= h) return;
+            const idx = y * w + x;
+            if (!visited[idx] && matchesBg(idx)) {
+              visited[idx] = 1;
+              queue[tail++] = idx;
+            }
+          };
+
+          for (let x = 0; x < w; x++) { enqueue(x, 0); enqueue(x, h - 1); }
+          for (let y = 0; y < h; y++) { enqueue(0, y); enqueue(w - 1, y); }
+
+          while (head < tail) {
+            const idx = queue[head++];
+            data[idx * 4 + 3] = 0;
+            const x = idx % w;
+            const y = (idx - x) / w;
+            enqueue(x + 1, y);
+            enqueue(x - 1, y);
+            enqueue(x, y + 1);
+            enqueue(x, y - 1);
+          }
+
+          oCtx.putImageData(imgData, 0, 0);
+          const cleanImg = new Image();
+          cleanImg.onload = () => resolve(cleanImg);
+          cleanImg.src = off.toDataURL('image/png');
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+  };
+
+  // ===========================================================================
+  // 4. SCENE & STORY MANAGEMENT
+  // ===========================================================================
+  const SceneManager = {
+    renderStrip() {
+      const strip = document.getElementById('sceneStrip');
+      strip.innerHTML = State.scenes.map((s, idx) =>
+        `<div class="scene-chip ${idx === State.currentSceneIdx ? 'active' : ''}" onclick="SceneManager.switchTo(${idx})">${escapeHtml(s.name)}</div>`
+      ).join('') + `<div class="scene-chip" onclick="SceneManager.addScene(false)">+ Scene</div>`;
+      document.getElementById('sceneTag').innerText = currentScene().name;
+    },
+
+    switchTo(idx) {
+      State.currentSceneIdx = idx;
+      const sc = currentScene();
+      State.selectedLayerId = sc.layers.length ? sc.layers[sc.layers.length - 1].id : null;
+      document.getElementById('subtitleInput').value = sc.subtitle || '';
+      document.getElementById('ttsTextInput').value = sc.subtitle || '';
+      document.getElementById('camZoomRange').value = sc.cam.zoom;
+      document.getElementById('sceneAudioBadge').innerText = sc.voiceUrl ? '✅ Audio Attached' : '📱 iOS Voice Ready';
+      this.renderStrip();
+      StageManager.renderLayerChips();
+      StageManager.syncControls();
+    },
+
+    addScene(duplicate) {
+      const num = State.scenes.length + 1;
+      if (duplicate) {
+        const src = currentScene();
+        const clonedLayers = src.layers.map(l => ({
+          ...l,
+          id: nextId('lyr'),
+          poses: [...l.poses],
+          movingAB: false,
+          moveProgress: 0
+        }));
+        State.scenes.push({
+          id: nextId('sc'),
+          name: `Scene ${num}`,
+          bgImg: src.bgImg,
+          layers: clonedLayers,
+          subtitle: src.subtitle,
+          voiceUrl: src.voiceUrl,
+          voiceBlob: src.voiceBlob,
+          cam: { ...src.cam }
+        });
+      } else {
+        State.scenes.push({
+          id: nextId('sc'),
+          name: `Scene ${num}`,
+          bgImg: null,
+          layers: [],
+          subtitle: '',
+          voiceUrl: null,
+          voiceBlob: null,
+          cam: { zoom: 1, panX: 0, panY: 0 }
+        });
+      }
+      this.switchTo(State.scenes.length - 1);
+    },
+
+    deleteCurrent() {
+      if (State.scenes.length <= 1) return alert('At least one scene is required.');
+      State.scenes.splice(State.currentSceneIdx, 1);
+      State.scenes.forEach((s, i) => { s.name = `Scene ${i + 1}`; });
+      this.switchTo(Math.max(0, State.currentSceneIdx - 1));
+    },
+
+    saveSubtitle() {
+      currentScene().subtitle = document.getElementById('subtitleInput').value;
+    }
+  };
+
+  const StoryEngine = {
+    async spawnStickman() {
+      const expr = document.getElementById('stickExpr').value;
+      const gear = document.getElementById('stickGear').value;
+      const img = await VectorFactory.createStickman(expr, gear);
+      StageManager.addCharacter(img, `Stickman (${expr})`);
+      setStatus('Stickman added to stage!');
+    },
+
+    async spawnProp(type) {
+      const img = await VectorFactory.createProp(type);
+      StageManager.addCharacter(img, type === 'lightbulb' ? '💡 Idea' : '➡️ Arrow');
+      const added = currentLayers()[currentLayers().length - 1];
+      added.scale = 0.45;
+      added.anim = 'float';
+      added.isTalker = false;
+    },
+
+    async applyVectorBG() {
+      const theme = document.getElementById('vectorBgSelect').value;
+      currentScene().bgImg = await VectorFactory.createBackground(theme);
+      setStatus('2D Background applied!');
+    },
+
+    loadBGFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        currentScene().bgImg = img;
+        setStatus('Custom background loaded!');
+      };
+      img.src = URL.createObjectURL(file);
+    },
+
+    loadCharFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => StageManager.addCharacter(img);
+      img.src = URL.createObjectURL(file);
+    },
+
+    async buildFromScript(scriptScenes) {
+      State.scenes = [];
+      for (let i = 0; i < scriptScenes.length; i++) {
+        const item = scriptScenes[i];
+        const bgImg = await VectorFactory.createBackground(item.bg || 'meadow');
+        const charImg = await VectorFactory.createStickman(item.expr || 'happy', item.gear || 'none');
+        const layers = [{
+          id: nextId('lyr'),
+          name: `Hero (${item.expr || 'happy'})`,
+          poses: [charImg],
+          activePose: 0,
+          x: canvas.width * 0.38,
+          y: canvas.height * 0.62,
+          scale: 0.9,
+          flipX: false,
+          anim: item.anim || 'bounce',
+          isTalker: true,
+          pointA: null,
+          pointB: null,
+          movingAB: false,
+          moveProgress: 0
+        }];
+
+        if (item.prop) {
+          const pImg = await VectorFactory.createProp(item.prop);
+          layers.push({
+            id: nextId('lyr'),
+            name: item.prop,
+            poses: [pImg],
+            activePose: 0,
+            x: canvas.width * 0.56,
+            y: canvas.height * 0.34,
+            scale: 0.48,
+            flipX: false,
+            anim: 'float',
+            isTalker: false,
+            pointA: null,
+            pointB: null,
+            movingAB: false,
+            moveProgress: 0
+          });
+        }
+
+        State.scenes.push({
+          id: nextId('sc'),
+          name: `Scene ${i + 1}`,
+          bgImg,
+          layers,
+          subtitle: item.dialogue || '',
+          voiceUrl: null,
+          voiceBlob: null,
+          cam: { zoom: 1, panX: 0, panY: 0 }
+        });
+      }
+      SceneManager.switchTo(0);
+      setStatus(`Generated ${State.scenes.length}-Scene Story!`);
+    },
+
+    async buildDemoStory() {
+      await this.buildFromScript([
+        { bg: 'studio', expr: 'idea', gear: 'laptop', prop: 'lightbulb', anim: 'bounce', dialogue: 'Step 1: I just got an epic 2D animation idea!' },
+        { bg: 'meadow', expr: 'happy', gear: 'backpack', prop: null, anim: 'walk', dialogue: 'Step 2: Packing my gear and heading to the kingdom!' },
+        { bg: 'battle', expr: 'hero', gear: 'hero_sword', prop: null, anim: 'bounce', dialogue: 'Step 3: Now I am ready to conquer the final boss!' }
+      ]);
+    }
+  };
+
+  // ===========================================================================
+  // 5. STAGE, LAYERS & CAMERA MANAGER
+  // ===========================================================================
+  const StageManager = {
+    addCharacter(img, name) {
+      const id = nextId('lyr');
+      const targetHeight = canvas.height * 0.55;
+      const initialScale = img.height > 0 ? Math.min(1, targetHeight / img.height) : 0.85;
+      currentLayers().push({
+        id,
+        name: name || `Char ${currentLayers().length + 1}`,
+        poses: [img],
+        activePose: 0,
+        x: canvas.width / 2,
+        y: canvas.height * 0.62,
+        scale: parseFloat(initialScale.toFixed(2)),
+        flipX: false,
+        anim: 'bounce',
+        isTalker: true,
+        pointA: null,
+        pointB: null,
+        movingAB: false,
+        moveProgress: 0
+      });
+      this.selectLayer(id);
+    },
+
+    selectLayer(id) {
+      State.selectedLayerId = id;
+      this.renderLayerChips();
+      this.syncControls();
+    },
+
+    syncControls() {
+      const l = currentLayers().find(l => l.id === State.selectedLayerId);
+      if (l) {
+        document.getElementById('animSelect').value = l.anim;
+        document.getElementById('scaleRange').value = l.scale;
+        document.getElementById('talkCheck').checked = l.isTalker;
+      }
+    },
+
+    renderLayerChips() {
+      document.getElementById('layerList').innerHTML = currentLayers().map(l =>
+        `<div class="chip ${l.id === State.selectedLayerId ? 'active' : ''}" onclick="StageManager.selectLayer('${l.id}')">${escapeHtml(l.name)}</div>`
+      ).join('');
+    },
+
+    moveLayerOrder(dir) {
+      const arr = currentLayers();
+      const idx = arr.findIndex(l => l.id === State.selectedLayerId);
+      const target = idx + dir;
+      if (idx < 0 || target < 0 || target >= arr.length) return;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      this.renderLayerChips();
+    },
+
+    updateSelected(prop, val) {
+      const l = currentLayers().find(l => l.id === State.selectedLayerId);
+      if (l) l[prop] = val;
+    },
+
+    flipSelected() {
+      const l = currentLayers().find(l => l.id === State.selectedLayerId);
+      if (l) l.flipX = !l.flipX;
+    },
+
+    deleteSelected() {
+      const sc = currentScene();
+      sc.layers = sc.layers.filter(l => l.id !== State.selectedLayerId);
+      State.selectedLayerId = sc.layers.length ? sc.layers[sc.layers.length - 1].id : null;
+      this.renderLayerChips();
+    },
+
+    async cutoutSelectedBg() {
+      const l = currentLayers().find(l => l.id === State.selectedLayerId);
+      if (!l) return;
+      try {
+        setStatus('Removing outer background...');
+        l.poses[l.activePose] = await VectorFactory.edgeFloodFillCutout(l.poses[l.activePose]);
+        setStatus('Background cutout applied!');
+      } catch (err) {
+        alert('Cutout failed due to image security restrictions.');
+      }
+    },
+
+    setKeyframe(point) {
+      const l = currentLayers().find(l => l.id === State.selectedLayerId);
+      if (!l) return;
+      if (point === 'A') {
+        l.pointA = { x: l.x, y: l.y };
+        setStatus('Start Position A saved');
+      } else {
+        l.pointB = { x: l.x, y: l.y };
+        setStatus('End Position B saved');
+      }
+    },
+
+    triggerMoveAB() {
+      const l = currentLayers().find(l => l.id === State.selectedLayerId);
+      if (!l || !l.pointA || !l.pointB) {
+        return alert('Please set both Start (A) and End (B) positions first.');
+      }
+      l.x = l.pointA.x;
+      l.y = l.pointA.y;
+      l.moveProgress = 0;
+      l.movingAB = true;
+    },
+
+    setCameraZoom(val) {
+      currentScene().cam.zoom = val;
+    },
+
+    focusSelected() {
+      const l = currentLayers().find(l => l.id === State.selectedLayerId);
+      if (!l) return setStatus('Select a character first');
+      const sc = currentScene();
+      sc.cam.zoom = 1.65;
+      sc.cam.panX = (canvas.width / 2) - l.x;
+      sc.cam.panY = (canvas.height / 2) - l.y + 40;
+      document.getElementById('camZoomRange').value = sc.cam.zoom;
+    },
+
+    resetCamera() {
+      currentScene().cam = { zoom: 1, panX: 0, panY: 0 };
+      document.getElementById('camZoomRange').value = 1;
+    }
+  };
+
+  // ===========================================================================
+  // 6. WEB AUDIO MIXER, ROYALTY-FREE BGM SYNTH & VOICE ENGINE
+  // ===========================================================================
+  const AudioEngine = {
+    ctx: null,
+    voiceAnalyser: null,
+    voiceData: null,
+    bgmGain: null,
+    sfxGain: null,
+    masterDest: null,
+    simulatedVoiceLevel: 0,
+    synthTimer: null,
+    synthStep: 0,
+    isSynthPlaying: false,
+
+    PATTERNS: {
+      upbeat:  { tempo: 250, wave: 'triangle', notes: [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 880.00, 698.46, 523.25, 659.25, 783.99, 1046.50, 783.99, 659.25, 587.33, 493.88] },
+      epic:    { tempo: 290, wave: 'sawtooth', notes: [220.00, 220.00, 261.63, 329.63, 293.66, 293.66, 246.94, 196.00, 220.00, 261.63, 329.63, 440.00, 392.00, 329.63, 293.66, 246.94] },
+      chill:   { tempo: 410, wave: 'sine',     notes: [349.23, 440.00, 523.25, 659.25, 329.63, 392.00, 493.88, 587.33, 293.66, 349.23, 440.00, 523.25, 392.00, 493.88, 587.33, 659.25] },
+      mystery: { tempo: 330, wave: 'triangle', notes: [220.00, 233.08, 220.00, 261.63, 220.00, 233.08, 207.65, 196.00, 220.00, 261.63, 311.13, 293.66, 261.63, 233.08, 207.65, 196.00] }
+    },
+
+    init() {
+      if (this.ctx) {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        return;
+      }
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterDest = this.ctx.createMediaStreamDestination();
+
+      // Silent Keep-Alive Oscillator maintains steady MediaRecorder clock on iOS
+      const keepAliveOsc = this.ctx.createOscillator();
+      const keepAliveGain = this.ctx.createGain();
+      keepAliveGain.gain.value = 0.0001;
+      keepAliveOsc.connect(keepAliveGain);
+      keepAliveGain.connect(this.masterDest);
+      keepAliveOsc.start();
+
+      const vSrc = this.ctx.createMediaElementSource(voicePlayer);
+      this.voiceAnalyser = this.ctx.createAnalyser();
+      this.voiceAnalyser.fftSize = 64;
+      this.voiceData = new Uint8Array(this.voiceAnalyser.frequencyBinCount);
+      vSrc.connect(this.voiceAnalyser);
+      this.voiceAnalyser.connect(this.ctx.destination);
+      this.voiceAnalyser.connect(this.masterDest);
+
+      const bSrc = this.ctx.createMediaElementSource(bgmPlayer);
+      this.bgmGain = this.ctx.createGain();
+      this.bgmGain.gain.value = parseFloat(document.getElementById('bgmVolRange').value);
+      bSrc.connect(this.bgmGain);
+      this.bgmGain.connect(this.ctx.destination);
+      this.bgmGain.connect(this.masterDest);
+
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = 0.6;
+      this.sfxGain.connect(this.ctx.destination);
+      this.sfxGain.connect(this.masterDest);
+    },
+
+    startSynthBgm(key) {
+      this.stopSynthBgm();
+      const pat = this.PATTERNS[key];
+      if (!pat) return;
+      this.init();
+      this.isSynthPlaying = true;
+      this.synthStep = 0;
+
+      const tick = () => {
+        if (!this.isSynthPlaying) return;
+        const freq = pat.notes[this.synthStep % pat.notes.length];
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const noteGain = this.ctx.createGain();
+        osc.type = pat.wave;
+        osc.frequency.setValueAtTime(freq, now);
+
+        const dur = pat.tempo / 1000;
+        noteGain.gain.setValueAtTime(0.001, now);
+        noteGain.gain.linearRampToValueAtTime(0.28, now + 0.03);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, now + dur * 0.92);
+
+        osc.connect(noteGain);
+        noteGain.connect(this.bgmGain);
+        osc.start(now);
+        osc.stop(now + dur);
+        this.synthStep++;
+      };
+      tick();
+      this.synthTimer = setInterval(tick, pat.tempo);
+    },
+
+    stopSynthBgm() {
+      this.isSynthPlaying = false;
+      if (this.synthTimer) {
+        clearInterval(this.synthTimer);
+        this.synthTimer = null;
+      }
+    },
+
+    onBgmPresetChange() {
+      const val = document.getElementById('bgmPresetSelect').value;
+      if (this.isSynthPlaying || !bgmPlayer.paused) {
+        this.stopSynthBgm();
+        bgmPlayer.pause();
+        if (this.PATTERNS[val]) {
+          this.startSynthBgm(val);
+          document.getElementById('playBgmBtn').innerText = '⏸️ Stop';
+        } else if (val === 'custom' && bgmPlayer.src) {
+          bgmPlayer.play();
+          document.getElementById('playBgmBtn').innerText = '⏸️ Stop';
+        } else {
+          document.getElementById('playBgmBtn').innerText = '🎵 Test';
+        }
+      }
+    },
+
+    toggleBgm() {
+      const preset = document.getElementById('bgmPresetSelect').value;
+      if (preset === 'none') return alert('Background music is currently muted.');
+      if (this.PATTERNS[preset]) {
+        if (this.isSynthPlaying) {
+          this.stopSynthBgm();
+          document.getElementById('playBgmBtn').innerText = '🎵 Test';
+        } else {
+          bgmPlayer.pause();
+          this.startSynthBgm(preset);
+          document.getElementById('playBgmBtn').innerText = '⏸️ Stop';
+        }
+      } else if (preset === 'custom') {
+        if (!bgmPlayer.src) return alert('Tap "🎶 Load MP3" to import a music file first.');
+        this.init();
+        if (bgmPlayer.paused) {
+          bgmPlayer.play();
+          document.getElementById('playBgmBtn').innerText = '⏸️ Stop';
+        } else {
+          bgmPlayer.pause();
+          document.getElementById('playBgmBtn').innerText = '🎵 Test';
+        }
+      }
+    },
+
+    loadBgmFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      bgmPlayer.src = URL.createObjectURL(file);
+      document.getElementById('bgmPresetSelect').value = 'custom';
+      setStatus(`Music loaded: ${file.name}`);
+    },
+
+    setBgmVolume(v) {
+      if (this.bgmGain && this.ctx) {
+        this.bgmGain.gain.setTargetAtTime(parseFloat(v), this.ctx.currentTime, 0.05);
+      }
+    },
+
+    duckBgm(isSpeaking) {
+      if (!this.bgmGain || !this.ctx) return;
+      const baseVol = parseFloat(document.getElementById('bgmVolRange').value);
+      const target = isSpeaking ? baseVol * 0.35 : baseVol;
+      this.bgmGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.08);
+    },
+
+    playSFX(type) {
+      this.init();
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      if (type === 'boing') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.18);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.35);
+        gain.gain.setValueAtTime(0.7, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.38);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'pop') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(950, now + 0.08);
+        gain.gain.setValueAtTime(0.8, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === 'boom') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(130, now);
+        osc.frequency.exponentialRampToValueAtTime(32, now + 0.5);
+        gain.gain.setValueAtTime(0.9, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+        osc.start(now);
+        osc.stop(now + 0.56);
+      } else if (type === 'ding') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(1320, now + 0.1);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.46);
+      }
+    },
+
+    loadSceneVoiceFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (currentScene().voiceUrl) URL.revokeObjectURL(currentScene().voiceUrl);
+      currentScene().voiceBlob = file;
+      currentScene().voiceUrl = URL.createObjectURL(file);
+      document.getElementById('sceneAudioBadge').innerText = '✅ Audio Attached';
+      setStatus(`Attached audio to ${currentScene().name}`);
+    },
+
+    clearSceneAudio() {
+      if (currentScene().voiceUrl) URL.revokeObjectURL(currentScene().voiceUrl);
+      currentScene().voiceUrl = null;
+      currentScene().voiceBlob = null;
+      document.getElementById('sceneAudioBadge').innerText = '📱 iOS Voice Ready';
+      setStatus('Reset to system voice');
+    },
+
+    populateNativeVoices() {
+      if (!('speechSynthesis' in window)) return;
+      const load = () => {
+        const voices = speechSynthesis.getVoices();
+        const sorted = voices.map((v, i) => ({ v, i })).sort((a, b) => {
+          const aEn = a.v.lang.toLowerCase().startsWith('en') ? 0 : 1;
+          const bEn = b.v.lang.toLowerCase().startsWith('en') ? 0 : 1;
+          return aEn - bEn;
+        });
+        document.getElementById('nativeVoiceList').innerHTML =
+          sorted.map(({ v, i }) => `<option value="${i}">${escapeHtml(v.name)} (${escapeHtml(v.lang)})</option>`).join('');
+      };
+      load();
+      speechSynthesis.onvoiceschanged = load;
+    },
+
+    speakNativePromise(text) {
+      return new Promise(resolve => {
+        if (!text || !('speechSynthesis' in window)) {
+          setTimeout(resolve, 2500);
+          return;
+        }
+        speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        const voices = speechSynthesis.getVoices();
+        const idx = document.getElementById('nativeVoiceList').value;
+        if (voices[idx]) utter.voice = voices[idx];
+        utter.pitch = parseFloat(document.getElementById('pitchRange').value);
+        utter.rate = parseFloat(document.getElementById('rateRange').value);
+
+        let interval, finished = false;
+        const done = () => {
+          if (finished) return;
+          finished = true;
+          clearInterval(interval);
+          clearTimeout(safetyTimer);
+          this.simulatedVoiceLevel = 0;
+          this.duckBgm(false);
+          setTimeout(resolve, 350);
+        };
+
+        const estimatedDuration = Math.max(2500, text.split(/\s+/).length * 520 + 1500);
+        const safetyTimer = setTimeout(done, estimatedDuration);
+
+        utter.onstart = () => {
+          this.duckBgm(true);
+          interval = setInterval(() => {
+            this.simulatedVoiceLevel = 0.25 + Math.random() * 0.55;
+          }, 85);
+        };
+        utter.onend = done;
+        utter.onerror = done;
+        speechSynthesis.speak(utter);
+      });
+    },
+
+    playAudioUrlPromise(url) {
+      return new Promise(resolve => {
+        this.init();
+        voicePlayer.src = url;
+        voicePlayer.currentTime = 0;
+        this.duckBgm(true);
+        const done = () => {
+          this.duckBgm(false);
+          setTimeout(resolve, 300);
+        };
+        voicePlayer.onended = done;
+        voicePlayer.onerror = done;
+        voicePlayer.play().catch(done);
+      });
+    },
+
+    previewSceneDialogue() {
+      const text = document.getElementById('ttsTextInput').value.trim();
+      if (!text && !currentScene().voiceUrl) {
+        return alert('Please enter a voiceover script first.');
+      }
+      if (text) {
+        document.getElementById('subtitleInput').value = text;
+        SceneManager.saveSubtitle();
+      }
+      if (currentScene().voiceUrl) {
+        this.playAudioUrlPromise(currentScene().voiceUrl);
+      } else {
+        this.speakNativePromise(text);
+      }
+    }
+  };
+
+  // ===========================================================================
+  // 7. AI SERVICE (DUAL ANTHROPIC CLAUDE & OPENAI / OPENROUTER SUPPORT)
+  // ===========================================================================
+  const AIService = {
+    async generateStory() {
+      const url = document.getElementById('cfgLlmUrl').value.trim();
+      const apiKey = document.getElementById('cfgApiKey').value.trim();
+      const model = document.getElementById('cfgLlmModel').value.trim();
+      const topic = document.getElementById('storyPromptInput').value.trim();
+
+      if (!url || !apiKey) {
+        return alert('Configure your Story LLM Endpoint & API Key in Tab 4 first, or tap "1-Click Demo Story".');
+      }
+      if (!topic) return alert('Please enter a story idea first.');
+
+      const btn = document.getElementById('genStoryBtn');
+      btn.disabled = true;
+      btn.innerText = '⏳ Writing Scenes...';
+
+      const sysPrompt = `Convert the user's story idea into a JSON array of 3 to 4 scenes.
+Each object must contain ONLY these keys:
+- "bg": "studio" | "meadow" | "battle"
+- "expr": "happy" | "idea" | "hero" | "shocked"
+- "gear": "none" | "laptop" | "backpack" | "hero_sword"
+- "prop": "lightbulb" | "arrow" | null
+- "anim": "bounce" | "walk" | "shake" | "float"
+- "dialogue": punchy English sentence (maximum 12 words)
+Return valid JSON array only with no markdown formatting.`;
+
+      try {
+        const isAnthropic = url.toLowerCase().includes('anthropic.com');
+        const headers = isAnthropic
+          ? { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+          : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
+
+        const body = isAnthropic
+          ? { model: model || 'claude-3-5-sonnet-20241022', max_tokens: 1024, system: sysPrompt, messages: [{ role: 'user', content: topic }] }
+          : { model: model || 'gpt-4o-mini', messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: topic }] };
+
+        const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'LLM API request failed');
+
+        const raw = isAnthropic ? (data.content?.[0]?.text || '[]') : (data.choices?.[0]?.message?.content || '[]');
+        const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+        if (!Array.isArray(parsed) || !parsed.length) throw new Error('Invalid scene JSON returned');
+
+        await StoryEngine.buildFromScript(parsed);
+      } catch (err) {
+        alert('AI Story Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🤖 AI Build Scenes';
+      }
+    },
+
+    async generateVoice() {
+      const url = document.getElementById('cfgTtsUrl').value.trim();
+      const apiKey = document.getElementById('cfgApiKey').value.trim();
+      const voice = document.getElementById('ttsVoiceName').value.trim() || 'alloy';
+      const text = document.getElementById('ttsTextInput').value.trim();
+
+      if (!url || !apiKey) return alert('Configure your TTS API Endpoint & API Key in Tab 4 first.');
+      if (!text) return alert('Please enter dialogue text first.');
+
+      const btn = document.getElementById('genVoiceBtn');
+      btn.disabled = true;
+      btn.innerText = '⏳ Generating...';
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: 'tts-1', input: text, voice })
+        });
+        if (!res.ok) throw new Error('TTS API request failed');
+
+        const blob = await res.blob();
+        if (currentScene().voiceUrl) URL.revokeObjectURL(currentScene().voiceUrl);
+        const objUrl = URL.createObjectURL(blob);
+
+        currentScene().voiceBlob = blob;
+        currentScene().voiceUrl = objUrl;
+        document.getElementById('subtitleInput').value = text;
+        SceneManager.saveSubtitle();
+        document.getElementById('sceneAudioBadge').innerText = '✅ AI Voice Attached';
+
+        AudioEngine.playAudioUrlPromise(objUrl);
+      } catch (err) {
+        alert('AI Voice Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🎙️ Generate Voice';
+      }
+    },
+
+    async generateImage() {
+      const url = document.getElementById('cfgImgUrl').value.trim();
+      const apiKey = document.getElementById('cfgApiKey').value.trim();
+      const model = document.getElementById('cfgImgModel').value.trim();
+      const rawPrompt = document.getElementById('imgPromptInput').value.trim();
+      const preset = document.getElementById('imgStylePreset').value;
+
+      if (!url || !apiKey) return alert('Configure your Image API Endpoint & API Key below first.');
+      if (!rawPrompt) return alert('Please enter an image prompt first.');
+
+      let finalPrompt = rawPrompt;
+      if (preset === 'character') {
+        finalPrompt += ', 2D flat vector cartoon character, clean bold outlines, isolated on pure white background';
+      } else if (preset === 'background') {
+        finalPrompt += ', 2D cartoon animation background scenery, vibrant flat vector art, no characters';
+      }
+
+      const btn = document.getElementById('genImgBtn');
+      btn.disabled = true;
+      btn.innerText = '⏳ Generating...';
+
+      try {
+        const payload = { prompt: finalPrompt, n: 1, size: '1024x1024' };
+        if (model) payload.model = model;
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Image API request failed');
+
+        const item = data.data?.[0];
+        const imgSrc = item?.b64_json ? `data:image/png;base64,${item.b64_json}` : item?.url;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          State.lastGeneratedImg = img;
+          document.getElementById('aiImgPreview').src = img.src;
+          document.getElementById('aiImgPreviewBox').style.display = 'flex';
+        };
+        img.src = imgSrc;
+      } catch (err) {
+        alert('AI Image Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '✨ Generate 2D Art';
+      }
+    },
+
+    async applyImageAsChar(autoCut) {
+      if (!State.lastGeneratedImg) return;
+      if (autoCut) {
+        try {
+          const cleanImg = await VectorFactory.edgeFloodFillCutout(State.lastGeneratedImg);
+          StageManager.addCharacter(cleanImg, 'AI Char');
+        } catch (err) {
+          StageManager.addCharacter(State.lastGeneratedImg, 'AI Char');
+        }
+      } else {
+        StageManager.addCharacter(State.lastGeneratedImg, 'AI Char');
+      }
+    },
+
+    applyImageAsBG() {
+      if (State.lastGeneratedImg) {
+        currentScene().bgImg = State.lastGeneratedImg;
+        setStatus('AI background applied!');
+      }
+    }
+  };
+
+  // ===========================================================================
+  // 8. STORY PLAYBACK & VIDEO EXPORTER
+  // ===========================================================================
+  const Exporter = {
+    mediaRecorder: null,
+    chunks: [],
+
+    async playFullStory(withRecording) {
+      if (State.isPlayingFullStory) return;
+      State.isPlayingFullStory = true;
+      document.getElementById('playAllBtn').disabled = true;
+      document.getElementById('recMovieBtn').disabled = true;
+
+      const wasBgmActive = AudioEngine.isSynthPlaying || !bgmPlayer.paused;
+
+      try {
+        if (withRecording && !State.isRecording) {
+          this.toggleManualRecording();
+        } else if (!withRecording && !wasBgmActive) {
+          const bgmPreset = document.getElementById('bgmPresetSelect').value;
+          if (AudioEngine.PATTERNS[bgmPreset]) AudioEngine.startSynthBgm(bgmPreset);
+          else if (bgmPreset === 'custom' && bgmPlayer.src) bgmPlayer.play().catch(() => {});
+        }
+
+        for (let i = 0; i < State.scenes.length; i++) {
+          SceneManager.switchTo(i);
+          const sc = State.scenes[i];
+          if (sc.voiceUrl) {
+            await AudioEngine.playAudioUrlPromise(sc.voiceUrl);
+          } else if (sc.subtitle) {
+            await AudioEngine.speakNativePromise(sc.subtitle);
+          } else {
+            await new Promise(r => setTimeout(r, 2400));
+          }
+        }
+      } finally {
+        if (withRecording && State.isRecording) {
+          this.toggleManualRecording();
+        } else if (!withRecording && !wasBgmActive) {
+          AudioEngine.stopSynthBgm();
+          bgmPlayer.pause();
+        }
+        State.isPlayingFullStory = false;
+        document.getElementById('playAllBtn').disabled = false;
+        document.getElementById('recMovieBtn').disabled = false;
+        setStatus('Story playback finished!');
+      }
+    },
+
+    toggleManualRecording() {
+      const btn = document.getElementById('recordBtn');
+      if (!State.isRecording) {
+        AudioEngine.init();
+        const canvasStream = canvas.captureStream(30);
+        const tracks = [...canvasStream.getVideoTracks()];
+        if (AudioEngine.masterDest) {
+          tracks.push(...AudioEngine.masterDest.stream.getAudioTracks());
+        }
+
+        const bgmPreset = document.getElementById('bgmPresetSelect').value;
+        if (AudioEngine.PATTERNS[bgmPreset] && !AudioEngine.isSynthPlaying) {
+          AudioEngine.startSynthBgm(bgmPreset);
+        } else if (bgmPreset === 'custom' && bgmPlayer.src && bgmPlayer.paused) {
+          bgmPlayer.play();
+        }
+
+        const combinedStream = new MediaStream(tracks);
+        let options = {};
+        let ext = 'mp4';
+
+        if (typeof MediaRecorder.isTypeSupported === 'function') {
+          if (MediaRecorder.isTypeSupported('video/mp4')) {
+            options = { mimeType: 'video/mp4' };
+            ext = 'mp4';
+          } else if (MediaRecorder.isTypeSupported('video/webm')) {
+            options = { mimeType: 'video/webm' };
+            ext = 'webm';
+          }
+        }
+
+        this.chunks = [];
+        this.mediaRecorder = new MediaRecorder(combinedStream, options);
+        const resolvedMime = this.mediaRecorder.mimeType || (ext === 'mp4' ? 'video/mp4' : 'video/webm');
+
+        this.mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) this.chunks.push(e.data);
+        };
+        this.mediaRecorder.onstop = () => {
+          const blob = new Blob(this.chunks, { type: resolvedMime });
+          const url = URL.createObjectURL(blob);
+          const filename = `Cartoon_Studio_${Date.now()}.${ext}`;
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+
+          const banner = document.getElementById('exportBanner');
+          const dlLink = document.getElementById('exportDownloadLink');
+          dlLink.href = url;
+          dlLink.download = filename;
+          banner.style.display = 'flex';
+
+          voicePlayer.pause();
+          bgmPlayer.pause();
+          AudioEngine.stopSynthBgm();
+          document.getElementById('playBgmBtn').innerText = '🎵 Test';
+        };
+
+        this.mediaRecorder.start(250);
+        State.isRecording = true;
+        btn.className = 'btn-recording';
+        btn.innerText = '⏹ Stop & Save';
+        setStatus('Recording HD Video...');
+      } else {
+        this.mediaRecorder.stop();
+        State.isRecording = false;
+        btn.className = 'btn-record';
+        btn.innerText = '⏺ Live Rec';
+        setStatus('Video exported!');
+      }
+    }
+  };
+
+  // ===========================================================================
+  // 9. TOUCH / POINTER DRAGGING & RENDER LOOP
+  // ===========================================================================
+  function getWorldCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const cx = (clientX - rect.left) * (canvas.width / rect.width);
+    const cy = (clientY - rect.top) * (canvas.height / rect.height);
+    return {
+      x: (cx - canvas.width / 2) / State.liveCam.zoom + canvas.width / 2 - State.liveCam.panX,
+      y: (cy - canvas.height / 2) / State.liveCam.zoom + canvas.height / 2 - State.liveCam.panY
+    };
+  }
+
+  function handlePointerDown(pos) {
+    const arr = currentLayers();
+    let hitLayer = null;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const l = arr[i];
+      const img = l.poses[l.activePose];
+      const w = img.width * l.scale * 0.5;
+      const h = img.height * l.scale * 0.5;
+      if (Math.abs(pos.x - l.x) < w && Math.abs(pos.y - l.y) < h) {
+        hitLayer = l;
+        break;
+      }
+    }
+    if (hitLayer) {
+      StageManager.selectLayer(hitLayer.id);
+      State.isDragging = true;
+      State.dragOffset = { x: pos.x - hitLayer.x, y: pos.y - hitLayer.y };
+    } else {
+      State.selectedLayerId = null;
+      StageManager.renderLayerChips();
+    }
+  }
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handlePointerDown(getWorldCoords(e));
+  }, { passive: false });
+
+  canvas.addEventListener('mousedown', (e) => {
+    handlePointerDown(getWorldCoords(e));
+  });
+
+  const handlePointerMove = (e) => {
+    if (!State.isDragging) return;
+    if (e.cancelable) e.preventDefault();
+    const pos = getWorldCoords(e);
+    const l = currentLayers().find(l => l.id === State.selectedLayerId);
+    if (l) {
+      l.x = Math.max(0, Math.min(canvas.width, pos.x - State.dragOffset.x));
+      l.y = Math.max(0, Math.min(canvas.height, pos.y - State.dragOffset.y));
+    }
+  };
+
+  canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+  canvas.addEventListener('mousemove', handlePointerMove);
+  window.addEventListener('touchend', () => { State.isDragging = false; });
+  window.addEventListener('mouseup', () => { State.isDragging = false; });
+
+  function drawWrappedSubtitles(text) {
+    if (!text) return;
+    ctx.save();
+    const fontSize = Math.round(canvas.width * 0.032);
+    ctx.font = `800 ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const maxWidth = canvas.width * 0.84;
+    const words = text.split(/\s+/);
+    const lines = [];
+    let currentLine = words[0] || '';
+
+    for (let i = 1; i < words.length; i++) {
+      const testLine = currentLine + ' ' + words[i];
+      if (ctx.measureText(testLine).width <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = words[i];
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    const lineHeight = fontSize * 1.28;
+    const totalHeight = lines.length * lineHeight;
+    const startY = canvas.height - totalHeight - fontSize * 0.55;
+
+    let widest = 0;
+    lines.forEach(line => {
+      widest = Math.max(widest, ctx.measureText(line).width);
+    });
+
+    const padX = fontSize * 0.7;
+    const padY = fontSize * 0.35;
+    ctx.fillStyle = 'rgba(11, 13, 18, 0.75)';
+    drawRoundRect(
+      ctx,
+      canvas.width / 2 - widest / 2 - padX,
+      startY - lineHeight / 2 - padY,
+      widest + padX * 2,
+      totalHeight + padY * 2,
+      12
+    );
+    ctx.fill();
+
+    lines.forEach((line, idx) => {
+      const y = startY + idx * lineHeight;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeText(line, canvas.width / 2, y);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(line, canvas.width / 2, y);
+    });
+    ctx.restore();
+  }
+
+  function renderLoop() {
+    const t = performance.now() / 1000;
+    const sc = currentScene();
+
+    State.liveCam.zoom += (sc.cam.zoom - State.liveCam.zoom) * 0.12;
+    State.liveCam.panX += (sc.cam.panX - State.liveCam.panX) * 0.12;
+    State.liveCam.panY += (sc.cam.panY - State.liveCam.panY) * 0.12;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(State.liveCam.zoom, State.liveCam.zoom);
+    ctx.translate(-canvas.width / 2 + State.liveCam.panX, -canvas.height / 2 + State.liveCam.panY);
+
+    if (sc.bgImg) {
+      ctx.drawImage(sc.bgImg, 0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = '#8ecae6';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#90be6d';
+      ctx.fillRect(0, canvas.height * 0.78, canvas.width, canvas.height * 0.22);
+    }
+
+    let voiceBoost = AudioEngine.simulatedVoiceLevel;
+    if (AudioEngine.voiceAnalyser && !voicePlayer.paused) {
+      AudioEngine.voiceAnalyser.getByteFrequencyData(AudioEngine.voiceData);
+      const avg = AudioEngine.voiceData.reduce((a, b) => a + b, 0) / AudioEngine.voiceData.length;
+      voiceBoost = Math.max(voiceBoost, avg / 255);
+    }
+
+    sc.layers.forEach(l => {
+      if (l.movingAB && l.pointA && l.pointB) {
+        l.moveProgress += 0.012;
+        if (l.moveProgress >= 1) {
+          l.moveProgress = 1;
+          l.movingAB = false;
+        }
+        l.x = l.pointA.x + (l.pointB.x - l.pointA.x) * l.moveProgress;
+        l.y = l.pointA.y + (l.pointB.y - l.pointA.y) * l.moveProgress;
+      }
+
+      let offX = 0, offY = 0, rot = 0, extraScale = 1;
+      if (l.anim === 'bounce' || l.movingAB) offY = -Math.abs(Math.sin(t * 6)) * 14;
+      else if (l.anim === 'walk') { offX = Math.sin(t * 3) * 24; rot = Math.sin(t * 6) * 0.06; }
+      else if (l.anim === 'shake') offX = Math.sin(t * 35) * 6;
+      else if (l.anim === 'float') offY = Math.sin(t * 2.5) * 18;
+
+      if (l.isTalker && voiceBoost > 0.05) {
+        extraScale = 1 + voiceBoost * 0.12;
+        offY -= voiceBoost * 15;
+      }
+
+      const img = l.poses[l.activePose] || l.poses[0];
+      if (!img) return;
+
+      ctx.save();
+      ctx.translate(l.x + offX, l.y + offY);
+      ctx.rotate(rot);
+      ctx.scale((l.flipX ? -1 : 1) * l.scale * extraScale, l.scale * extraScale);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      // Selection bounding box (visible only during editing)
+      if (l.id === State.selectedLayerId && !State.isRecording && !State.isPlayingFullStory) {
+        ctx.strokeStyle = 'rgba(255, 183, 3, 0.78)';
+        ctx.lineWidth = 4 / l.scale;
+        ctx.setLineDash([12 / l.scale, 8 / l.scale]);
+        ctx.strokeRect(-img.width / 2, -img.height / 2, img.width, img.height);
+      }
+      ctx.restore();
+    });
+
+    ctx.restore();
+    drawWrappedSubtitles((sc.subtitle || '').trim());
+    requestAnimationFrame(renderLoop);
+  }
+
+  // ===========================================================================
+  // 10. PERSISTENT PROJECT STORAGE (INDEXEDDB WITH ARRAYBUFFER AUDIO)
+  // ===========================================================================
+  const ProjectStorage = {
+    openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('CartoonStudioProDB_v3', 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore('projects');
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e);
+      });
+    },
+
+    imgToDataURL(img) {
+      if (!img) return null;
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      return c.toDataURL('image/png');
+    },
+
+    dataURLToImg(src) {
+      return new Promise(resolve => {
+        if (!src) return resolve(null);
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = src;
+      });
+    },
+
+    async save() {
+      try {
+        setStatus('Saving project...');
+        const serialized = [];
+        for (const s of State.scenes) {
+          let voiceBuffer = null;
+          let voiceType = null;
+          if (s.voiceBlob) {
+            voiceBuffer = await s.voiceBlob.arrayBuffer();
+            voiceType = s.voiceBlob.type || 'audio/mpeg';
+          }
+          serialized.push({
+            id: s.id,
+            name: s.name,
+            bgData: this.imgToDataURL(s.bgImg),
+            subtitle: s.subtitle,
+            voiceBuffer,
+            voiceType,
+            cam: s.cam,
+            layers: s.layers.map(l => ({
+              id: l.id,
+              name: l.name,
+              posesData: l.poses.map(p => this.imgToDataURL(p)),
+              activePose: l.activePose,
+              x: l.x,
+              y: l.y,
+              scale: l.scale,
+              flipX: l.flipX,
+              anim: l.anim,
+              isTalker: l.isTalker,
+              pointA: l.pointA,
+              pointB: l.pointB
+            }))
+          });
+        }
+
+        const db = await this.openDB();
+        const tx = db.transaction('projects', 'readwrite');
+        tx.objectStore('projects').put(serialized, 'autosave');
+        tx.oncomplete = () => setStatus('Project saved!');
+      } catch (err) {
+        alert('Save Error: ' + err.message);
+      }
+    },
+
+    async load() {
+      try {
+        const db = await this.openDB();
+        const tx = db.transaction('projects', 'readonly');
+        const req = tx.objectStore('projects').get('autosave');
+        req.onsuccess = async () => {
+          const saved = req.result;
+          if (!saved) return alert('No saved project found.');
+
+          State.scenes.forEach(s => { if (s.voiceUrl) URL.revokeObjectURL(s.voiceUrl); });
+
+          const loaded = [];
+          for (const s of saved) {
+            const bgImg = await this.dataURLToImg(s.bgData);
+            const layers = [];
+            for (const l of s.layers) {
+              const poses = [];
+              for (const pData of l.posesData) {
+                const pImg = await this.dataURLToImg(pData);
+                if (pImg) poses.push(pImg);
+              }
+              layers.push({ ...l, poses, movingAB: false, moveProgress: 0 });
+            }
+
+            let voiceBlob = null;
+            let voiceUrl = null;
+            if (s.voiceBuffer) {
+              voiceBlob = new Blob([s.voiceBuffer], { type: s.voiceType || 'audio/mpeg' });
+              voiceUrl = URL.createObjectURL(voiceBlob);
+            }
+
+            loaded.push({
+              id: s.id,
+              name: s.name,
+              bgImg,
+              layers,
+              subtitle: s.subtitle,
+              voiceBlob,
+              voiceUrl,
+              cam: s.cam
+            });
+          }
+
+          State.scenes = loaded;
+          SceneManager.switchTo(0);
+          setStatus('Project loaded!');
+        };
+      } catch (err) {
+        alert('Load Error: ' + err.message);
+      }
+    }
+  };
+
+  // ===========================================================================
+  // 11. BOOTSTRAP APPLICATION
+  // ===========================================================================
+  window.addEventListener('DOMContentLoaded', () => {
+    UI.init();
+    renderLoop();
+  });
+</script>
+</body>
+</html>
